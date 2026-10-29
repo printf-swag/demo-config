@@ -13,7 +13,7 @@ Nobody typed "critical". Adoption did.
 ## What's in here
 
 | Path | What it does |
-|------|--------------|
+| --- | --- |
 | `port/blueprint-service-additions.json` | `criticality`, `lifecycle` and `consumers` on the service blueprint, plus its relation to the GitHub repository |
 | `port/blueprint-factory.json` | The consumers: one factory per print site, with a `uses` relation to the services it calls |
 | `port/workflow-adoption_sets_criticality.json` | When a factory's `uses` changes, count the factories using that service and set its criticality (3+ critical, 2 high, 1 medium, 0 low) |
@@ -69,6 +69,9 @@ return `403 Upgrade to GitHub Team` on Free) and a Port organization.
   seconds, so the adoption workflow counts consumers itself.
 - Filter repositories in GitHub with `props.Port.criticality:critical`. If that
   returns nothing, the ruleset matches nothing.
+- Port's GitHub integration action occasionally failed without a reason during
+  rehearsal. The sync workflow writes, re-reads the service, and writes again
+  twice; a repeated write of the current values is harmless.
 - An owning-team property makes repositories findable. It isn't access control
   and it doesn't write CODEOWNERS.
 

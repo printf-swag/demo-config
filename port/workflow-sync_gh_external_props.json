@@ -2,7 +2,7 @@
   "identifier": "sync_gh_external_props",
   "title": "Sync Port context to GitHub",
   "icon": "Github",
-  "description": "Whenever a service's owner, lifecycle or criticality changes, write them to its repository's Port.* external custom properties.",
+  "description": "Whenever a service's owner, lifecycle or criticality changes, write them to its repository's Port.* external custom properties. The integration action occasionally fails without a reason, so two retries follow; they re-read the service first, so a late retry never writes a stale value.",
   "category": "Printf",
   "allowAnyoneToViewRuns": true,
   "nodes": [
@@ -49,6 +49,92 @@
             "criticality": "{{ .outputs.trigger.diff.after.properties.criticality }}"
           }
         },
+        "onFailure": "continue"
+      },
+      "variables": {},
+      "verbose": true
+    },
+    {
+      "identifier": "read_current",
+      "title": "Re-read the service",
+      "icon": "Microservice",
+      "description": null,
+      "config": {
+        "type": "WEBHOOK",
+        "url": "{{ \"https://api.port.io/v1/blueprints/service/entities/\" + (.outputs.trigger.diff.after.identifier // .outputs.trigger.diff.before.identifier) }}",
+        "agent": false,
+        "synchronized": true,
+        "method": "GET",
+        "onTimeout": "fail",
+        "onFailure": "terminate"
+      },
+      "variables": {
+        "entity": "{{ .result.response.data.entity }}"
+      },
+      "verbose": true
+    },
+    {
+      "identifier": "update_github_retry",
+      "title": "Retry with current values",
+      "icon": "Github",
+      "description": null,
+      "config": {
+        "type": "INTEGRATION_ACTION",
+        "installationId": "github-ocean",
+        "integrationProvider": "github-ocean",
+        "integrationInvocationType": "update_repo_external_custom_properties",
+        "integrationActionExecutionProperties": {
+          "org": "printf-swag",
+          "repo": "{{ .outputs.read_current.entity.relations.github_repository }}",
+          "externalPropertiesMapping": {
+            "owner": "{{ .outputs.read_current.entity.team[0] // \"\" }}",
+            "lifecycle": "{{ .outputs.read_current.entity.properties.lifecycle }}",
+            "criticality": "{{ .outputs.read_current.entity.properties.criticality }}"
+          }
+        },
+        "onFailure": "continue"
+      },
+      "variables": {},
+      "verbose": true
+    },
+    {
+      "identifier": "read_current_again",
+      "title": "Re-read the service again",
+      "icon": "Microservice",
+      "description": null,
+      "config": {
+        "type": "WEBHOOK",
+        "url": "{{ \"https://api.port.io/v1/blueprints/service/entities/\" + (.outputs.trigger.diff.after.identifier // .outputs.trigger.diff.before.identifier) }}",
+        "agent": false,
+        "synchronized": true,
+        "method": "GET",
+        "onTimeout": "fail",
+        "onFailure": "terminate"
+      },
+      "variables": {
+        "entity": "{{ .result.response.data.entity }}"
+      },
+      "verbose": true
+    },
+    {
+      "identifier": "update_github_final",
+      "title": "Final retry with current values",
+      "icon": "Github",
+      "description": null,
+      "config": {
+        "type": "INTEGRATION_ACTION",
+        "installationId": "github-ocean",
+        "integrationProvider": "github-ocean",
+        "integrationInvocationType": "update_repo_external_custom_properties",
+        "integrationActionExecutionProperties": {
+          "org": "printf-swag",
+          "repo": "{{ .outputs.read_current_again.entity.relations.github_repository }}",
+          "externalPropertiesMapping": {
+            "owner": "{{ .outputs.read_current_again.entity.team[0] // \"\" }}",
+            "lifecycle": "{{ .outputs.read_current_again.entity.properties.lifecycle }}",
+            "criticality": "{{ .outputs.read_current_again.entity.properties.criticality }}"
+          }
+        },
         "onFailure": "terminate"
       },
       "variables": {},
@@ -60,6 +146,26 @@
       "description": null,
       "sourceIdentifier": "trigger",
       "targetIdentifier": "update_github"
+    },
+    {
+      "description": null,
+      "sourceIdentifier": "update_github",
+      "targetIdentifier": "read_current"
+    },
+    {
+      "description": null,
+      "sourceIdentifier": "read_current",
+      "targetIdentifier": "update_github_retry"
+    },
+    {
+      "description": null,
+      "sourceIdentifier": "update_github_retry",
+      "targetIdentifier": "read_current_again"
+    },
+    {
+      "description": null,
+      "sourceIdentifier": "read_current_again",
+      "targetIdentifier": "update_github_final"
     }
   ]
 }
