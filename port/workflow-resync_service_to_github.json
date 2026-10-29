@@ -1,0 +1,104 @@
+{
+  "identifier": "resync_service_to_github",
+  "title": "Resync service to GitHub",
+  "icon": "Github",
+  "description": "Re-send a service's owner, lifecycle and criticality to its repository's Port.* external custom properties. Use after a failed sync or when resetting the demo.",
+  "category": "Printf",
+  "allowAnyoneToViewRuns": true,
+  "nodes": [
+    {
+      "identifier": "trigger",
+      "title": null,
+      "icon": null,
+      "description": null,
+      "config": {
+        "type": "SELF_SERVE_TRIGGER",
+        "userInputs": {
+          "properties": {
+            "service": {
+              "title": "Service",
+              "type": "string",
+              "format": "entity",
+              "blueprint": "service"
+            }
+          },
+          "required": [
+            "service"
+          ],
+          "order": [
+            "service"
+          ]
+        },
+        "published": true,
+        "permissions": {
+          "roles": [
+            "Admin"
+          ]
+        },
+        "contexts": [
+          {
+            "on": "ENTITY",
+            "userInput": "service"
+          }
+        ]
+      },
+      "variables": {},
+      "verbose": false
+    },
+    {
+      "identifier": "fetch_service",
+      "title": "Read the service",
+      "icon": "Microservice",
+      "description": null,
+      "config": {
+        "type": "WEBHOOK",
+        "url": "{{ \"https://api.port.io/v1/blueprints/service/entities/\" + (.outputs.trigger.service | if type == \"object\" then .identifier else . end) }}",
+        "agent": false,
+        "synchronized": true,
+        "method": "GET",
+        "onTimeout": "fail",
+        "onFailure": "terminate"
+      },
+      "variables": {
+        "entity": "{{ .result.response.data.entity }}"
+      },
+      "verbose": true
+    },
+    {
+      "identifier": "update_github",
+      "title": "Update external properties",
+      "icon": "Github",
+      "description": null,
+      "config": {
+        "type": "INTEGRATION_ACTION",
+        "installationId": "github-ocean",
+        "integrationProvider": "github-ocean",
+        "integrationInvocationType": "update_repo_external_custom_properties",
+        "integrationActionExecutionProperties": {
+          "org": "printf-swag",
+          "repo": "{{ .outputs.fetch_service.entity.relations.github_repository }}",
+          "externalPropertiesMapping": {
+            "owner": "{{ .outputs.fetch_service.entity.team[0] // \"\" }}",
+            "lifecycle": "{{ .outputs.fetch_service.entity.properties.lifecycle }}",
+            "criticality": "{{ .outputs.fetch_service.entity.properties.criticality }}"
+          }
+        },
+        "onFailure": "terminate"
+      },
+      "variables": {},
+      "verbose": true
+    }
+  ],
+  "connections": [
+    {
+      "description": null,
+      "sourceIdentifier": "trigger",
+      "targetIdentifier": "fetch_service"
+    },
+    {
+      "description": null,
+      "sourceIdentifier": "fetch_service",
+      "targetIdentifier": "update_github"
+    }
+  ]
+}

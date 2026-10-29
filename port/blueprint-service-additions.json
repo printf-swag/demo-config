@@ -1,0 +1,27 @@
+{
+  "identifier": "service",
+  "schema": {
+    "properties": {
+      "criticality": {
+        "title": "Criticality",
+        "type": "string",
+        "enum": ["low", "medium", "high", "critical"],
+        "enumColors": { "low": "turquoise", "medium": "yellow", "high": "orange", "critical": "red" }
+      },
+      "lifecycle": {
+        "title": "Lifecycle",
+        "type": "string",
+        "enum": ["prototype", "production", "deprecated"],
+        "enumColors": { "prototype": "purple", "production": "green", "deprecated": "lightGray" }
+      },
+      "consumers": {
+        "title": "Factories using it",
+        "description": "Written by the adoption workflow when a factory's dependencies change.",
+        "type": "number"
+      }
+    }
+  },
+  "relations": {
+    "github_repository": { "title": "GitHub Repository", "target": "githubRepository", "required": false, "many": false }
+  }
+}

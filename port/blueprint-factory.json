@@ -1,0 +1,43 @@
+{
+  "identifier": "factory",
+  "title": "Factory",
+  "icon": "Cluster",
+  "schema": {
+    "properties": {
+      "city": {
+        "title": "City",
+        "type": "string"
+      },
+      "size_system": {
+        "title": "Size system",
+        "type": "string",
+        "enum": [
+          "US",
+          "EU",
+          "JP"
+        ],
+        "enumColors": {
+          "US": "blue",
+          "EU": "yellow",
+          "JP": "red"
+        }
+      }
+    },
+    "required": []
+  },
+  "relations": {
+    "github_repository": {
+      "title": "GitHub Repository",
+      "target": "githubRepository",
+      "required": false,
+      "many": false
+    },
+    "uses": {
+      "title": "Uses",
+      "description": "Services this factory calls, read from its package.json",
+      "target": "service",
+      "required": false,
+      "many": true
+    }
+  }
+}

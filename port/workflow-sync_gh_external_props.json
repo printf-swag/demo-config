@@ -1,0 +1,65 @@
+{
+  "identifier": "sync_gh_external_props",
+  "title": "Sync Port context to GitHub",
+  "icon": "Github",
+  "description": "Whenever a service's owner, lifecycle or criticality changes, write them to its repository's Port.* external custom properties.",
+  "category": "Printf",
+  "allowAnyoneToViewRuns": true,
+  "nodes": [
+    {
+      "identifier": "trigger",
+      "title": null,
+      "icon": null,
+      "description": null,
+      "config": {
+        "type": "EVENT_TRIGGER",
+        "event": {
+          "type": "ANY_ENTITY_CHANGE",
+          "blueprintIdentifier": "service"
+        },
+        "condition": {
+          "type": "JQ",
+          "expressions": [
+            "(.diff.after.relations.github_repository // .diff.before.relations.github_repository) != null",
+            "(.diff.before == null or .diff.after == null or .diff.before.properties.criticality != .diff.after.properties.criticality or .diff.before.properties.lifecycle != .diff.after.properties.lifecycle or .diff.before.team != .diff.after.team or .diff.before.relations.github_repository != .diff.after.relations.github_repository)"
+          ],
+          "combinator": "and"
+        },
+        "published": true
+      },
+      "variables": {},
+      "verbose": true
+    },
+    {
+      "identifier": "update_github",
+      "title": "Update external properties",
+      "icon": "Github",
+      "description": null,
+      "config": {
+        "type": "INTEGRATION_ACTION",
+        "installationId": "github-ocean",
+        "integrationProvider": "github-ocean",
+        "integrationInvocationType": "update_repo_external_custom_properties",
+        "integrationActionExecutionProperties": {
+          "org": "printf-swag",
+          "repo": "{{ .outputs.trigger.diff.after.relations.github_repository // .outputs.trigger.diff.before.relations.github_repository }}",
+          "externalPropertiesMapping": {
+            "owner": "{{ .outputs.trigger.diff.after.team[0] // \"\" }}",
+            "lifecycle": "{{ .outputs.trigger.diff.after.properties.lifecycle }}",
+            "criticality": "{{ .outputs.trigger.diff.after.properties.criticality }}"
+          }
+        },
+        "onFailure": "terminate"
+      },
+      "variables": {},
+      "verbose": true
+    }
+  ],
+  "connections": [
+    {
+      "description": null,
+      "sourceIdentifier": "trigger",
+      "targetIdentifier": "update_github"
+    }
+  ]
+}

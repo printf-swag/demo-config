@@ -1,0 +1,102 @@
+{
+  "identifier": "adoption_sets_criticality",
+  "title": "Adoption sets criticality",
+  "icon": "Alert",
+  "description": "When a factory starts or stops using a service, count the factories that use it and set the service's criticality. 3 or more: critical. 2: high. 1: medium. 0: low. Nobody types the value.",
+  "category": "Printf",
+  "allowAnyoneToViewRuns": true,
+  "nodes": [
+    {
+      "identifier": "trigger",
+      "title": null,
+      "icon": null,
+      "description": null,
+      "config": {
+        "type": "EVENT_TRIGGER",
+        "event": {
+          "type": "ANY_ENTITY_CHANGE",
+          "blueprintIdentifier": "factory"
+        },
+        "condition": {
+          "type": "JQ",
+          "expressions": [
+            "((.diff.before.relations.uses // []) | sort) != ((.diff.after.relations.uses // []) | sort)"
+          ],
+          "combinator": "and"
+        },
+        "published": true
+      },
+      "variables": {},
+      "verbose": true
+    },
+    {
+      "identifier": "count_consumers",
+      "title": "Count factories using the service",
+      "icon": "Cluster",
+      "description": null,
+      "config": {
+        "type": "WEBHOOK",
+        "url": "https://api.port.io/v1/blueprints/factory/entities/search",
+        "agent": false,
+        "synchronized": true,
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": {
+            "rules": [
+              {
+                "value": "{{ ((.outputs.trigger.diff.after.relations.uses // []) as $a | (.outputs.trigger.diff.before.relations.uses // []) as $b | (($a - $b) + ($b - $a)))[0] }}",
+                "operator": "contains",
+                "relation": "uses"
+              }
+            ],
+            "combinator": "and"
+          },
+          "include": [
+            "$identifier"
+          ]
+        },
+        "onTimeout": "fail",
+        "onFailure": "terminate"
+      },
+      "variables": {
+        "consumers": "{{ .result.response.data.entities | length }}"
+      },
+      "verbose": true
+    },
+    {
+      "identifier": "set_criticality",
+      "title": "Set consumers and criticality",
+      "icon": "Alert",
+      "description": null,
+      "config": {
+        "type": "UPSERT_ENTITY",
+        "blueprintIdentifier": "service",
+        "mapping": {
+          "identifier": "{{ ((.outputs.trigger.diff.after.relations.uses // []) as $a | (.outputs.trigger.diff.before.relations.uses // []) as $b | (($a - $b) + ($b - $a)))[0] }}",
+          "properties": {
+            "consumers": "{{ .outputs.count_consumers.consumers }}",
+            "criticality": "{{ .outputs.count_consumers.consumers as $n | if $n >= 3 then \"critical\" elif $n == 2 then \"high\" elif $n == 1 then \"medium\" else \"low\" end }}"
+          }
+        },
+        "onFailure": "terminate"
+      },
+      "variables": {},
+      "verbose": true
+    }
+  ],
+  "connections": [
+    {
+      "description": null,
+      "sourceIdentifier": "trigger",
+      "targetIdentifier": "count_consumers"
+    },
+    {
+      "description": null,
+      "sourceIdentifier": "count_consumers",
+      "targetIdentifier": "set_criticality"
+    }
+  ]
+}
