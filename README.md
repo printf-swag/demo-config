@@ -2,9 +2,9 @@
 
 Configuration from the GitHub Universe 2026 session by Baruch Sadogursky (Port).
 
-Printf is a fictional swag company. Its `size-catalog` started as one factory's
-sizing helper. Then Austin used it, then Berlin. The day Osaka started using it,
-Port marked it critical, wrote that to GitHub as an external custom property,
+Printf is a fictional swag company. Its `size-catalog` started as Austin's
+sizing helper, a prototype one factory used. The day Berlin and Osaka started
+using it too, Port marked it critical, wrote that to GitHub as an external custom property,
 and an organization ruleset that targets `Port.criticality=critical` started
 requiring two reviews on a pull request that had already met the old rules.
 
@@ -16,7 +16,7 @@ Nobody typed "critical". Adoption did.
 | --- | --- |
 | `port/blueprint-service-additions.json` | `criticality`, `lifecycle` and `consumers` on the service blueprint, plus its relation to the GitHub repository |
 | `port/blueprint-factory.json` | The consumers: one factory per print site, with a `uses` relation to the services it calls |
-| `port/workflow-adoption_sets_criticality.json` | When a factory's `uses` changes, count the factories using that service and set its criticality (3+ critical, 2 high, 1 medium, 0 low) |
+| `port/workflow-adoption_sets_criticality.json` | When a factory's `uses` changes, count the factories using that service and set its criticality (one factory: low, it's that factory's prototype; two or more: critical) |
 | `port/workflow-sync_gh_external_props.json` | When a service's owner, lifecycle or criticality changes, write them to `Port.owner`, `Port.lifecycle` and `Port.criticality` on its repository |
 | `port/workflow-resync_service_to_github.json` | Self-service: re-send one service's values to GitHub |
 | `github/ruleset-baseline.json` | Every repository: pull requests with one approval on the default branch |

@@ -2,7 +2,7 @@
   "identifier": "adoption_sets_criticality",
   "title": "Adoption sets criticality",
   "icon": "Alert",
-  "description": "When a factory starts or stops using a service, count the factories that use it and set the service's criticality. 3 or more: critical. 2: high. 1: medium. 0: low. Nobody types the value.",
+  "description": "When a factory starts or stops using a service, count the factories that use it and set the service's criticality. One factory: it's still that factory's prototype (low). Two or more: it's shared, so it's critical. Nobody types the value.",
   "category": "Printf",
   "allowAnyoneToViewRuns": true,
   "nodes": [
@@ -78,7 +78,7 @@
           "identifier": "{{ ((.outputs.trigger.diff.after.relations.uses // []) as $a | (.outputs.trigger.diff.before.relations.uses // []) as $b | (($a - $b) + ($b - $a)))[0] }}",
           "properties": {
             "consumers": "{{ .outputs.count_consumers.consumers }}",
-            "criticality": "{{ .outputs.count_consumers.consumers as $n | if $n >= 3 then \"critical\" elif $n == 2 then \"high\" elif $n == 1 then \"medium\" else \"low\" end }}"
+            "criticality": "{{ .outputs.count_consumers.consumers as $n | if $n >= 2 then \"critical\" else \"low\" end }}"
           }
         },
         "onFailure": "terminate"

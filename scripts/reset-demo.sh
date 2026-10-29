@@ -2,8 +2,9 @@
 # Puts the printf-swag demo back to its opening state and verifies it.
 #
 # Opening state:
-#   Port    osaka-press does not use size-catalog; size-catalog has 2 consumers, criticality high
-#   GitHub  size-catalog carries Port.criticality=high; only "Every repo: one review" applies
+#   Port    only austin-press uses size-catalog (berlin-press and osaka-press don't);
+#           size-catalog has 1 consumer, criticality low: Austin's prototype
+#   GitHub  size-catalog carries Port.criticality=low; only "Every repo: one review" applies
 #   GitHub  size-catalog PR #1 is open, its test check passed, one approval, mergeable
 #   GitHub  printf-docs carries Port.criticality=low (the control)
 #
@@ -50,18 +51,31 @@ wait_for() { # description, seconds, check function (re-run on every attempt)
   echo "ok   $what"
 }
 
-echo "== Port: osaka-press stops using size-catalog"
-curl -sS --fail-with-body -X PATCH "$PORT_API_BASE/blueprints/factory/entities/osaka-press" \
-  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"relations":{"uses":[]}}' > /dev/null
+set_uses() { # factory, JSON array of services
+  curl -sS --fail-with-body -X PATCH "$PORT_API_BASE/blueprints/factory/entities/$1" \
+    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+    -d "{\"relations\":{\"uses\":$2}}" > /dev/null
+}
 
-port_at_opening()    { [ "$(service_state size-catalog)" = "2 high" ]; }
-github_at_opening()  { [ "$(gh_criticality size-catalog)" = "high" ]; }
+echo "== Port: only austin-press uses size-catalog"
+set_uses austin-press '["size-catalog"]'
+set_uses berlin-press '[]'
+sleep 3
+set_uses osaka-press '[]'
+sleep 3
+# Relations already in the opening state trigger no recount, so write the outcome directly.
+# The sync workflow reacts to this change (or to none, if the value is already right).
+curl -sS --fail-with-body -X PATCH "$PORT_API_BASE/blueprints/service/entities/size-catalog" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"properties":{"consumers":1,"criticality":"low"}}' > /dev/null
+
+port_at_opening()    { [ "$(service_state size-catalog)" = "1 low" ]; }
+github_at_opening()  { [ "$(gh_criticality size-catalog)" = "low" ]; }
 one_review_only()    { [ "$(required_reviews size-catalog)" = "1" ]; }
 control_untouched()  { [ "$(gh_criticality printf-docs)" = "low" ]; }
 
-wait_for "Port: size-catalog has 2 consumers, criticality high" 60 port_at_opening
-wait_for "GitHub: size-catalog Port.criticality=high" 90 github_at_opening
+wait_for "Port: size-catalog has 1 consumer, criticality low" 60 port_at_opening
+wait_for "GitHub: size-catalog Port.criticality=low" 90 github_at_opening
 wait_for "GitHub: size-catalog needs 1 review" 60 one_review_only
 wait_for "GitHub: printf-docs Port.criticality=low" 10 control_untouched
 
